@@ -1,11 +1,11 @@
 /*
  * Copyright 2016 Jordan Carr
  * Project Name: finalProject
- * Class Name: computerScience_301_FinalProject.VocabularyGenerator
- * Last Modification Date: 6/2/16 11:55 PM
+ * Class Name: VocabularyGenerator_FinalProject.VocabularyGenerator
+ * Last Modification Date: 6/3/16 12:49 AM
  */
 
-package computerScience_301_FinalProject;
+package VocabularyGenerator_FinalProject;
 
 import java.io.*;
 import java.security.MessageDigest;
