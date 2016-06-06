@@ -2,7 +2,7 @@
  * Copyright 2016 Jordan Carr
  * Project Name: finalProject
  * Class Name: VocabularyGenerator_FinalProject.VocabularyGenerator
- * Last Modification Date: 6/3/16 12:49 AM
+ * Last Modification Date: 6/6/16 1:27 PM
  */
 
 package VocabularyGenerator_FinalProject;
@@ -15,27 +15,45 @@ import java.util.Scanner;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+/**
+ * A program designed to take a book or piece of text and generate a list of vocabulary words from it. The user can
+ * define what length of words they are looking for and whether they want allCaps or not.
+ */
 class VocabularyGenerator {
 
+    /**
+     * Stores the states and values of user selected options
+     */
     private static boolean verbosity = false;
+    private static boolean allCaps;
+    private static int wordLength = 3;
 
     /**
      * Takes user input on the location of the file they desire to have a sorted dictionary created. This method passes
      * and handles all relevant data and exceptions. When an exception is encountered the error message is printed to
      * screen so that the user can fix the issue or forward the error message to the developer
      *
-     * @param args If "v" is passed as an argument any encountered exceptions will have a verbose output.
+     * @param args There are no arguments for this program.
      */
     public static void main(String[] args) {
-        if (args != null && args[0].equals("v")) {
-            verbosity = true;
-        }
         try {
+            System.out.print("Do you want verbose error reporting? (yes?): ");
+            verbosity = new BufferedReader(new InputStreamReader(System.in)).readLine().equalsIgnoreCase("yes");
             System.out.print("Please enter the location of the file you wish generate vocabulary lists for: ");
             final String inputLocation = new BufferedReader(new InputStreamReader(System.in)).readLine();
-            final String[] outputLocations = {inputLocation, inputLocation + ".lowercase.output", inputLocation + ".uppercase.output"};
+            final String[] outputLocations = {
+                    inputLocation,
+                    inputLocation + ".words.output",
+                    inputLocation + ".allCaps.output"
+            };
+            System.out.print("Do you want fully uppercase words in the output file? [potentially acronyms] (yes or no) ");
+            allCaps = new BufferedReader(new InputStreamReader(System.in)).readLine().equalsIgnoreCase("yes");
+            System.out.print("Please enter the minimum word length you want (1, 2, 3...): ");
+            wordLength = Integer.parseInt(new BufferedReader(new InputStreamReader(System.in)).readLine());
             fileOutput(outputLocations[1], sortData(deduplicate(fileInput(inputLocation, "[a-z]*"))));
-            fileOutput(outputLocations[2], sortData(deduplicate(fileInput(inputLocation, "[A-Z][a-zA-Z]*"))));
+            if (allCaps) {
+                fileOutput(outputLocations[2], sortData(deduplicate(fileInput(inputLocation, "[A-Z]*"))));
+            }
             compressData(outputLocations);
             hashSHA512(outputLocations[0] + ".zip");
             deleteExcessFiles(outputLocations);
@@ -67,7 +85,7 @@ class VocabularyGenerator {
             Scanner scanner = new Scanner(line);
             while (scanner.hasNext()) {
                 String word = scanner.next();
-                if ((word.length() > 2) && word.matches(regex)) {
+                if ((word.length() >= wordLength) && word.matches(regex)) {
                     tmp.add(word);
                 }
             }
@@ -199,6 +217,9 @@ class VocabularyGenerator {
         byte[] buffer = new byte[1024];
         final ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(input[0] + ".zip"));
         for (String sourceFile : input) {
+            if (!allCaps && sourceFile.contains(".allCaps.output")) {
+                break;
+            }
             FileInputStream fileInputStream = new FileInputStream(sourceFile);
             zipOutputStream.putNextEntry(new ZipEntry(sourceFile));
             int length;
@@ -221,6 +242,9 @@ class VocabularyGenerator {
      */
     private static void deleteExcessFiles(String[] input) throws Exception {
         for (int i = 1; i < input.length; i++) {
+            if (!allCaps && input[i].contains(".allCaps.output")) {
+                break;
+            }
             File file = new File(input[i]);
             if (!file.delete()) {
                 throw new IOException();
