@@ -2,30 +2,36 @@
  * Copyright 2016 Jordan Carr
  * Project Name: finalProject
  * Class Name: VocabularyGenerator_FinalProject.VocabularyGenerator
- * Last Modification Date: 6/6/16 8:25 PM
+ * Last Modification Date: 6/7/16 2:06 PM
  */
 
 package VocabularyGenerator_FinalProject;
 
 import java.io.*;
 import java.security.MessageDigest;
+import java.text.NumberFormat;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.Locale;
 import java.util.Scanner;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 /**
  * A program designed to take a book or piece of text and generate a list of vocabulary words from it. The user can
- * define what length of words they are looking for and whether they want allCaps or not.
+ * define what length of words they are looking for.
  */
 class VocabularyGenerator {
 
+    private static final NumberFormat nf = NumberFormat.getInstance(Locale.getDefault());
     /**
      * Stores the states and values of user selected options
      */
     private static boolean verbosity = false;
-    private static boolean allCaps = false;
+    private static int totalWords = 0;
+    private static int deduplicatedWords = 0;
+    private static int totalCharacterCount = 0;
+    private static int deduplicatedCharacters = 0;
 
     /**
      * Takes user input on the location of the file they desire to have a sorted dictionary created. This method passes
@@ -36,30 +42,31 @@ class VocabularyGenerator {
      */
     public static void main(String[] args) {
         try {
-            System.out.println("\t\t\t\t\tWelcome to The Vocabulary Generator\n\n" +
+            System.out.print("\t\t\t\t\tWelcome to The Vocabulary Generator\n\n" +
                     "With this program you can create a vocabulary list for any plain text input file\n" +
-                    "You will be able to select what file you wish to create the vocabulary list, whether\n" +
-                    "to include words in all capitals which may include acronyms and, the minimum length\n" +
-                    "of the words to include in the list. The data will be stored in a zip file of the\n" +
-                    "same name as the input file with the addition of the .zip extension.\n");
-            System.out.print("Do you want verbose error reporting? (yes?): ");
+                    "You will be able to select what file you wish to create the vocabulary list, and the\n" +
+                    "minimum length of the words to include in the list. The data will be stored in a zip\n" +
+                    "file of the same name as the input file with the addition of the .zip extension.\n\n" +
+                    "Do you want verbose error reporting? (yes?): ");
             verbosity = new BufferedReader(new InputStreamReader(System.in)).readLine().equalsIgnoreCase("yes");
+
             System.out.print("Please enter the location of the file you wish generate vocabulary lists for: ");
             final String inputLocation = new BufferedReader(new InputStreamReader(System.in)).readLine();
-            final String[] outputLocations = {inputLocation, inputLocation + ".words.output",
-                    inputLocation + ".allCaps.output"};
-            System.out.print("Do you want fully uppercase words in the output? (yes or no) ");
-            allCaps = new BufferedReader(new InputStreamReader(System.in)).readLine().equalsIgnoreCase("yes");
+
+            final String[] outputLocations = {inputLocation, inputLocation + ".words.output"};
+
             System.out.print("Please enter the minimum word length you want (1, 2... 10... 12...): ");
             int wordLength = Integer.parseInt(new BufferedReader(new InputStreamReader(System.in)).readLine());
-            fileOutput(outputLocations[1], sortData(deduplicate(fileInput(inputLocation, wordLength, "[a-z]*"))));
-            if (allCaps) {
-                fileOutput(outputLocations[2], sortData(deduplicate(fileInput(inputLocation, wordLength, "[A-Z]*"))));
-            }
+
+            fileOutput(outputLocations[1], sortData(deduplicate(fileInput(inputLocation, wordLength, "[a-zA-Z]*"))));
+
             compressData(outputLocations);
+
             hashSHA512(outputLocations[0] + ".zip");
+
             deleteExcessFiles(outputLocations);
-            System.out.println("No exceptions encountered.\nA compressed file containing the output files and a " +
+
+            System.out.println("\nNo exceptions encountered.\nA compressed file containing the output files and a " +
                     "SHA-512 hash have been generated");
         } catch (Exception e) {
             if (verbosity) {
@@ -81,7 +88,9 @@ class VocabularyGenerator {
      */
     private static LinkedList<String> fileInput(String location, int wordLength, String regex) throws Exception {
         LinkedList<String> tmp = new LinkedList<>();
+
         BufferedReader bufferedReader = new BufferedReader(new FileReader(location));
+
         String line;
         while ((line = bufferedReader.readLine()) != null) {
             Scanner scanner = new Scanner(line);
@@ -89,6 +98,8 @@ class VocabularyGenerator {
                 String word = scanner.next();
                 if ((word.length() >= wordLength) && word.matches(regex)) {
                     tmp.add(word);
+                    totalWords++;
+                    totalCharacterCount += word.length();
                 }
             }
             scanner.close();
@@ -104,6 +115,10 @@ class VocabularyGenerator {
      */
     private static String[] deduplicate(LinkedList<String> input) {
         final HashSet<String> hashSet = new HashSet<>(input);
+        deduplicatedWords = hashSet.size();
+        for (String aWord : hashSet) {
+            deduplicatedCharacters += aWord.length();
+        }
         return hashSet.toArray(new String[hashSet.size()]);
     }
 
@@ -127,10 +142,13 @@ class VocabularyGenerator {
         if (input.length > 1) {
             String[] left = new String[input.length / 2];
             String[] right = new String[input.length - (input.length / 2)];
+
             System.arraycopy(input, 0, left, 0, left.length);
             System.arraycopy(input, input.length / 2, right, 0, right.length);
+
             mergeSort(left);
             mergeSort(right);
+
             merge(input, left, right);
         }
     }
@@ -163,9 +181,19 @@ class VocabularyGenerator {
      */
     private static void fileOutput(String location, String[] input) throws Exception {
         final BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(location));
+
         for (String anInput : input) {
             bufferedWriter.write(anInput + "\n");
         }
+
+        bufferedWriter.write("\nThere are " + nf.format(totalWords) + " words match your specifications in the source " +
+                "document.\n");
+        bufferedWriter.write("There are " + nf.format(totalCharacterCount) + " non-whitespace characters in the " +
+                "source document.\n");
+        bufferedWriter.write("\nThere are " + nf.format(deduplicatedWords) + " unique words in this document.\n");
+        bufferedWriter.write("There are " + nf.format(deduplicatedCharacters) + " unique non-whitespace characters in " +
+                "this document.\n");
+
         bufferedWriter.close();
     }
 
@@ -178,11 +206,10 @@ class VocabularyGenerator {
      */
     private static void compressData(String[] input) throws Exception {
         byte[] buffer = new byte[1024];
+
         final ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(input[0] + ".zip"));
+
         for (String sourceFile : input) {
-            if (!allCaps && sourceFile.contains(".allCaps.output")) {
-                break;
-            }
             FileInputStream fileInputStream = new FileInputStream(sourceFile);
             zipOutputStream.putNextEntry(new ZipEntry(sourceFile));
             int length;
@@ -221,16 +248,22 @@ class VocabularyGenerator {
      */
     private static String getFileChecksum(MessageDigest digest, File file) throws Exception {
         StringBuilder stringBuilder = new StringBuilder();
+
         final FileInputStream fileInputStream = new FileInputStream(file);
+
         final byte[] byteArray = new byte[1024];
+
         int bytesCount;
         while ((bytesCount = fileInputStream.read(byteArray)) != -1) {
             digest.update(byteArray, 0, bytesCount);
         }
+
         fileInputStream.close();
+
         for (byte aByte : digest.digest()) {
             stringBuilder.append(Integer.toString(((int) aByte & 0xff) + 0x100, 16).substring(1));
         }
+
         return stringBuilder.toString();
     }
 
@@ -244,9 +277,6 @@ class VocabularyGenerator {
      */
     private static void deleteExcessFiles(String[] input) throws Exception {
         for (int i = 1; i < input.length; i++) {
-            if (!allCaps && input[i].contains(".allCaps.output")) {
-                break;
-            }
             File file = new File(input[i]);
             if (!file.delete()) {
                 throw new IOException();
