@@ -2,7 +2,7 @@
  * Copyright 2016 Jordan Carr
  * Project Name: finalProject
  * Class Name: VocabularyGenerator_FinalProject.VocabularyGenerator
- * Last Modification Date: 6/6/16 1:27 PM
+ * Last Modification Date: 6/6/16 5:34 PM
  */
 
 package VocabularyGenerator_FinalProject;
@@ -37,6 +37,12 @@ class VocabularyGenerator {
      */
     public static void main(String[] args) {
         try {
+            System.out.println("\t\t\t\t\tWelcome to The Vocabulary Generator\n\n" +
+                    "With this program you can create a vocabulary list for any plain text input file\n" +
+                    "You will be able to select what file you wish to create the vocabulary list, whether\n" +
+                    "to include words in all capitals which may include acronyms and, the minimum length\n" +
+                    "of the words to include in the list. The data will be stored in a zip file of the\n" +
+                    "same name as the input file with the addition of the .zip extension.\n");
             System.out.print("Do you want verbose error reporting? (yes?): ");
             verbosity = new BufferedReader(new InputStreamReader(System.in)).readLine().equalsIgnoreCase("yes");
             System.out.print("Please enter the location of the file you wish generate vocabulary lists for: ");
@@ -46,9 +52,9 @@ class VocabularyGenerator {
                     inputLocation + ".words.output",
                     inputLocation + ".allCaps.output"
             };
-            System.out.print("Do you want fully uppercase words in the output file? [potentially acronyms] (yes or no) ");
+            System.out.print("Do you want fully uppercase words in the output? (yes or no) ");
             allCaps = new BufferedReader(new InputStreamReader(System.in)).readLine().equalsIgnoreCase("yes");
-            System.out.print("Please enter the minimum word length you want (1, 2, 3...): ");
+            System.out.print("Please enter the minimum word length you want (1, 2... 10... 12...): ");
             wordLength = Integer.parseInt(new BufferedReader(new InputStreamReader(System.in)).readLine());
             fileOutput(outputLocations[1], sortData(deduplicate(fileInput(inputLocation, "[a-z]*"))));
             if (allCaps) {
