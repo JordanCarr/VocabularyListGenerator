@@ -2,7 +2,7 @@
  * Copyright 2016 Jordan Carr
  * Project Name: finalProject
  * Class Name: VocabularyGenerator_FinalProject.VocabularyGenerator
- * Last Modification Date: 6/6/16 8:05 PM
+ * Last Modification Date: 6/6/16 8:25 PM
  */
 
 package VocabularyGenerator_FinalProject;
@@ -25,8 +25,7 @@ class VocabularyGenerator {
      * Stores the states and values of user selected options
      */
     private static boolean verbosity = false;
-    private static boolean allCaps;
-    private static int wordLength = 3;
+    private static boolean allCaps = false;
 
     /**
      * Takes user input on the location of the file they desire to have a sorted dictionary created. This method passes
@@ -47,18 +46,15 @@ class VocabularyGenerator {
             verbosity = new BufferedReader(new InputStreamReader(System.in)).readLine().equalsIgnoreCase("yes");
             System.out.print("Please enter the location of the file you wish generate vocabulary lists for: ");
             final String inputLocation = new BufferedReader(new InputStreamReader(System.in)).readLine();
-            final String[] outputLocations = {
-                    inputLocation,
-                    inputLocation + ".words.output",
-                    inputLocation + ".allCaps.output"
-            };
+            final String[] outputLocations = {inputLocation, inputLocation + ".words.output",
+                    inputLocation + ".allCaps.output"};
             System.out.print("Do you want fully uppercase words in the output? (yes or no) ");
             allCaps = new BufferedReader(new InputStreamReader(System.in)).readLine().equalsIgnoreCase("yes");
             System.out.print("Please enter the minimum word length you want (1, 2... 10... 12...): ");
-            wordLength = Integer.parseInt(new BufferedReader(new InputStreamReader(System.in)).readLine());
-            fileOutput(outputLocations[1], sortData(deduplicate(fileInput(inputLocation, "[a-z]*"))));
+            int wordLength = Integer.parseInt(new BufferedReader(new InputStreamReader(System.in)).readLine());
+            fileOutput(outputLocations[1], sortData(deduplicate(fileInput(inputLocation, wordLength, "[a-z]*"))));
             if (allCaps) {
-                fileOutput(outputLocations[2], sortData(deduplicate(fileInput(inputLocation, "[A-Z]*"))));
+                fileOutput(outputLocations[2], sortData(deduplicate(fileInput(inputLocation, wordLength, "[A-Z]*"))));
             }
             compressData(outputLocations);
             hashSHA512(outputLocations[0] + ".zip");
@@ -83,7 +79,7 @@ class VocabularyGenerator {
      * @return The now filled LinkedList is returned with the valid words it contains.
      * @throws Exception The likely exception is that the file cannot be read though any exception can be thrown.
      */
-    private static LinkedList<String> fileInput(String location, String regex) throws Exception {
+    private static LinkedList<String> fileInput(String location, int wordLength, String regex) throws Exception {
         LinkedList<String> tmp = new LinkedList<>();
         BufferedReader bufferedReader = new BufferedReader(new FileReader(location));
         String line;
@@ -98,6 +94,17 @@ class VocabularyGenerator {
             scanner.close();
         }
         return tmp;
+    }
+
+    /**
+     * Takes an input String array and return a String array that has all duplicate entries removed.
+     *
+     * @param input The array to have duplicates removed from.
+     * @return The array that had the duplicates removed
+     */
+    private static String[] deduplicate(LinkedList<String> input) {
+        final HashSet<String> hashSet = new HashSet<>(input);
+        return hashSet.toArray(new String[hashSet.size()]);
     }
 
     /**
@@ -163,6 +170,32 @@ class VocabularyGenerator {
     }
 
     /**
+     * Takes all the files in the input string and compresses them int a file named as the first element in the input
+     * String + ".zip".
+     *
+     * @param input The String array containing all the file locations that will be used in the compression process.
+     * @throws Exception The likely exception is that the files cannot be read although this will catch any exception.
+     */
+    private static void compressData(String[] input) throws Exception {
+        byte[] buffer = new byte[1024];
+        final ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(input[0] + ".zip"));
+        for (String sourceFile : input) {
+            if (!allCaps && sourceFile.contains(".allCaps.output")) {
+                break;
+            }
+            FileInputStream fileInputStream = new FileInputStream(sourceFile);
+            zipOutputStream.putNextEntry(new ZipEntry(sourceFile));
+            int length;
+            while ((length = fileInputStream.read(buffer)) > 0) {
+                zipOutputStream.write(buffer, 0, length);
+            }
+            zipOutputStream.closeEntry();
+            fileInputStream.close();
+        }
+        zipOutputStream.close();
+    }
+
+    /**
      * Sets up and passes the output hash to the appropriate methods.
      *
      * @param location Where the output file will be written by passing it to the fileOutput method.
@@ -199,43 +232,6 @@ class VocabularyGenerator {
             stringBuilder.append(Integer.toString(((int) aByte & 0xff) + 0x100, 16).substring(1));
         }
         return stringBuilder.toString();
-    }
-
-    /**
-     * Takes an input String array and return a String array that has all duplicate entries removed.
-     *
-     * @param input The array to have duplicates removed from.
-     * @return The array that had the duplicates removed
-     */
-    private static String[] deduplicate(LinkedList<String> input) {
-        final HashSet<String> hashSet = new HashSet<>(input);
-        return hashSet.toArray(new String[hashSet.size()]);
-    }
-
-    /**
-     * Takes all the files in the input string and compresses them int a file named as the first element in the input
-     * String + ".zip".
-     *
-     * @param input The String array containing all the file locations that will be used in the compression process.
-     * @throws Exception The likely exception is that the files cannot be read although this will catch any exception.
-     */
-    private static void compressData(String[] input) throws Exception {
-        byte[] buffer = new byte[1024];
-        final ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(input[0] + ".zip"));
-        for (String sourceFile : input) {
-            if (!allCaps && sourceFile.contains(".allCaps.output")) {
-                break;
-            }
-            FileInputStream fileInputStream = new FileInputStream(sourceFile);
-            zipOutputStream.putNextEntry(new ZipEntry(sourceFile));
-            int length;
-            while ((length = fileInputStream.read(buffer)) > 0) {
-                zipOutputStream.write(buffer, 0, length);
-            }
-            zipOutputStream.closeEntry();
-            fileInputStream.close();
-        }
-        zipOutputStream.close();
     }
 
     /**
